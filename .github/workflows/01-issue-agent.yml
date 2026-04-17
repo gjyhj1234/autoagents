@@ -40,7 +40,7 @@ jobs:
         id: queue
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          result-encoding: json
+          result-encoding: string
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
