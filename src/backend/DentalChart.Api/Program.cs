@@ -1,4 +1,5 @@
 using DentalChart.Api.Contracts;
+using DentalChart.Api.Endpoints;
 using DentalChart.Api.Serialization;
 using DentalChart.Infrastructure;
 
@@ -29,6 +30,8 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
+app.UseAuthentication();
+app.UseAuthorization();
 
 if (app.Environment.IsDevelopment())
 {
@@ -39,6 +42,9 @@ app.MapGet("/", () => TypedResults.Redirect("/health"));
 
 app.MapGet("/health", () => TypedResults.Ok(new HealthResponse("healthy", DateTimeOffset.UtcNow)))
     .WithName("HealthCheck");
+
+app.MapAuthEndpoints();
+app.MapPatientEndpoints();
 
 app.Run();
 

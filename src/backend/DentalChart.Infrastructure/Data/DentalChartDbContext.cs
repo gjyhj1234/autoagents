@@ -21,6 +21,7 @@ public sealed class DentalChartDbContext(DbContextOptions<DentalChartDbContext> 
     public DbSet<AppointmentType> AppointmentTypes => Set<AppointmentType>();
     public DbSet<Appointment> Appointments => Set<Appointment>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
