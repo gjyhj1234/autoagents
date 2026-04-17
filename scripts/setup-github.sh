@@ -119,15 +119,35 @@ workflow_output="$(gh workflow run "01-issue-agent.yml" --repo "$REPO" 2>&1)" \
     echo "     $workflow_output"
   }
 
+# ─── 5. Check for COPILOT_PAT Secret ─────────────────────────────────────────
+echo ""
+echo "🔑 Checking for COPILOT_PAT secret..."
+pat_check=$(gh secret list --repo "$REPO" 2>/dev/null | grep -c "COPILOT_PAT" || true)
+if [ "$pat_check" -eq 0 ]; then
+  echo "  ⚠️  COPILOT_PAT secret NOT found!"
+  echo ""
+  echo "  ╔══════════════════════════════════════════════════════════════╗"
+  echo "  ║  IMPORTANT: Copilot auto-assignment requires a Personal    ║"
+  echo "  ║  Access Token (PAT) stored as the COPILOT_PAT secret.      ║"
+  echo "  ║  Without it, you must manually assign Copilot to issues.   ║"
+  echo "  ║                                                             ║"
+  echo "  ║  See: docs/setup-copilot-pat.md for instructions.          ║"
+  echo "  ╚══════════════════════════════════════════════════════════════╝"
+  echo ""
+else
+  echo "  ✅ COPILOT_PAT secret found"
+fi
+
 echo ""
 echo "============================================================"
 echo "✅ Repository setup complete!"
 echo ""
 echo "Next steps:"
-echo "  1. Go to: https://github.com/$REPO/issues"
-echo "  2. All 12 issues were created with the 'agent-task' label already applied"
-echo "  3. Workflow 01 will mark one issue as 'agent-in-progress' and the others as 'agent-queued'"
-echo "  4. The issue assigned to Copilot is the one currently running"
+echo "  1. REQUIRED: Create COPILOT_PAT secret if not done yet"
+echo "     See docs/setup-copilot-pat.md for step-by-step instructions"
+echo "  2. Go to: https://github.com/$REPO/issues"
+echo "  3. All 12 issues were created with the 'agent-task' label already applied"
+echo "  4. Workflow 01 will use COPILOT_PAT to assign Copilot to the first issue"
 echo "  5. Monitor Actions tab: https://github.com/$REPO/actions"
-echo "  6. If a Copilot PR appears, you may still need to click 'Approve and run workflows' on that PR"
+echo "  6. After each PR is merged, the next issue is automatically picked up"
 echo "============================================================"
