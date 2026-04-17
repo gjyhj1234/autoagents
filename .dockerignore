@@ -1,0 +1,9 @@
+.git
+.gitignore
+.env
+**/bin
+**/obj
+**/TestResults
+src/frontend/node_modules
+src/frontend/dist
+src/frontend/coverage

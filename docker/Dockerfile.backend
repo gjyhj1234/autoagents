@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+COPY src/backend/DentalChart.sln ./src/backend/
+COPY src/backend/DentalChart.Api/DentalChart.Api.csproj ./src/backend/DentalChart.Api/
+COPY src/backend/DentalChart.Core/DentalChart.Core.csproj ./src/backend/DentalChart.Core/
+COPY src/backend/DentalChart.Infrastructure/DentalChart.Infrastructure.csproj ./src/backend/DentalChart.Infrastructure/
+COPY src/backend/DentalChart.Tests/DentalChart.Tests.csproj ./src/backend/DentalChart.Tests/
+RUN dotnet restore ./src/backend/DentalChart.sln
+
+COPY src/backend ./src/backend
+RUN dotnet publish ./src/backend/DentalChart.Api/DentalChart.Api.csproj -c Release -o /app/publish /p:PublishAot=false
+
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+ENV ASPNETCORE_URLS=http://+:8080
+COPY --from=build /app/publish ./
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "DentalChart.Api.dll"]
