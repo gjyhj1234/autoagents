@@ -112,9 +112,12 @@ create_issue 12 "Reporting, PDF Export, and End-to-End Integration Tests" "agent
 
 echo ""
 echo "🚀 Starting the issue queue workflow..."
-gh workflow run "01-issue-agent.yml" --repo "$REPO" >/dev/null 2>&1 \
+workflow_output="$(gh workflow run "01-issue-agent.yml" --repo "$REPO" 2>&1)" \
   && echo "  ✅ Workflow 01 queued successfully" \
-  || echo "  ⚠️  Could not start Workflow 01 automatically; run it once from the Actions page"
+  || {
+    echo "  ⚠️  Could not start Workflow 01 automatically; run it once from the Actions page"
+    echo "     $workflow_output"
+  }
 
 echo ""
 echo "============================================================"

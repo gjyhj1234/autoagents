@@ -34,10 +34,17 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const defaultBranch = context.payload.repository?.default_branch || 'main';
-            const copilotLogin = 'copilot-swe-agent[bot]';
+            // REST/API login is "copilot-swe-agent[bot]"; GitHub issue UI may display the assignee as "Copilot".
+            const copilotAssigneeLogins = ['copilot-swe-agent[bot]'];
+            // Copilot may open PR branches using either the repo-prescribed feature/task-* pattern or its default copilot/* pattern.
+            const copilotBranchPrefixes = ['feature/task-', 'copilot/'];
             const statusMarker = '<!-- agent-queue-status -->';
             const linkedIssuePattern = /(?:close[sd]?|fix(?:e[sd])?|resolve[sd]?)\s+#(\d+)/i;
+
+            const repositoryInfo = context.payload.repository
+              ? { default_branch: context.payload.repository.default_branch }
+              : (await github.rest.repos.get({ owner, repo })).data;
+            const defaultBranch = repositoryInfo.default_branch;
 
             const hasLabel = (issue, name) => issue.labels.some(label => label.name === name);
             const isTaskIssue = (issue) => !issue.pull_request && hasLabel(issue, 'agent-task');
@@ -82,14 +89,18 @@ jobs:
                 repo,
                 issue_number: issueNumber,
                 labels: [add],
-              }).catch(() => {});
+              }).catch(error => {
+                console.log(`Could not add label "${add}" to issue #${issueNumber}: ${error.message}`);
+              });
 
               await github.rest.issues.removeLabel({
                 owner,
                 repo,
                 issue_number: issueNumber,
                 name: remove,
-              }).catch(() => {});
+              }).catch(error => {
+                console.log(`Could not remove label "${remove}" from issue #${issueNumber}: ${error.message}`);
+              });
             }
 
             const openIssues = await github.paginate(github.rest.issues.listForRepo, {
@@ -116,12 +127,12 @@ jobs:
             });
 
             const activePullRequest = openPullRequests.find(pr =>
-              pr.head.ref.startsWith('feature/task-') || pr.head.ref.startsWith('copilot/'),
+              copilotBranchPrefixes.some(prefix => pr.head.ref.startsWith(prefix)),
             );
 
             const assignedIssue = taskIssues.find(issue =>
               issue.assignees?.some(assignee =>
-                assignee.login === copilotLogin || assignee.login === 'Copilot',
+                copilotAssigneeLogins.includes(assignee.login),
               ),
             );
 
@@ -130,12 +141,15 @@ jobs:
             if (!activeIssueNumber && activePullRequest) {
               const match = (activePullRequest.body || '').match(linkedIssuePattern);
               if (match) {
-                activeIssueNumber = Number.parseInt(match[1], 10);
+                activeIssueNumber = parseInt(match[1], 10);
               }
             }
 
             if (activePullRequest && !activeIssueNumber) {
               console.log(`Active Copilot PR #${activePullRequest.number} detected without linked issue; leaving queue unchanged.`);
+              for (const issue of taskIssues) {
+                await setStatusLabels(issue.number, false);
+              }
               return;
             }
 
@@ -175,7 +189,11 @@ jobs:
                 owner,
                 repo,
                 issue_number: nextIssue.number,
-                assignees: [copilotLogin],
+                headers: {
+                  accept: 'application/vnd.github+json',
+                  'x-github-api-version': '2022-11-28',
+                },
+                assignees: [copilotAssigneeLogins[0]],
                 agent_assignment: {
                   target_repo: `${owner}/${repo}`,
                   base_branch: defaultBranch,
@@ -183,7 +201,7 @@ jobs:
                     'Use the issue body and .github/copilot-instructions.md as the primary requirements.',
                     'Open a pull request that includes "Closes #' + nextIssue.number + '" in the description.',
                     'Run the repository tests and checks that already exist before finishing.',
-                  ].join(' '),
+                  ].join('. '),
                 },
               });
 

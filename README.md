@@ -90,7 +90,7 @@
 
 | 文件 | 触发条件 | 作用 |
 |------|----------|------|
-| `.github/workflows/01-issue-agent.yml` | Task Issue 变化 / 手动运行 | 自动维护队列并把下一个任务分配给 Copilot |
+| `.github/workflows/01-issue-agent.yml` | Issue opened / reopened / labeled / unlabeled / 手动运行 | 自动维护队列并把下一个任务分配给 Copilot |
 | `.github/workflows/02-pr-tests.yml` | PR 创建或更新 | 运行后端测试、前端测试、Docker 冒烟测试 |
 | `.github/workflows/03-auto-merge.yml` | checks 完成 | 自动合并通过所有测试的 PR |
 
@@ -122,7 +122,8 @@
 2. **仓库 Settings 配置**（只需做一次）：
    - `Settings → General → Pull Requests` → 勾选 **Allow auto-merge** ✅
    - `Settings → Actions → General` → 选择 **Read and write permissions** ✅
-   - `Settings → Copilot`（或个人 Copilot 设置）→ 确认 **Copilot cloud agent** 已启用 ✅
+   - **个人仓库**：右上角头像 → `Copilot settings` → `Cloud agent` → `Repository access` 里包含当前仓库 ✅
+   - **组织仓库**：`Organization Settings → Copilot → Cloud agent → Repository access` 里包含当前仓库 ✅
 
 ### 方式 A：一键初始化（推荐）
 
@@ -160,7 +161,7 @@ bash scripts/setup-github.sh
 ### 流水线执行过程（全程自动）
 
 ```
-你的操作: 给 Issue 添加 "agent-task" 标签
+你的操作: 创建 / 提交带有 "agent-task" 标签的 Issue
                 ↓  (约 30 秒)
 Workflow 01 运行: 自动把最早的待办 Issue Assign 给 Copilot
                 ↓  (约 5-30 分钟，取决于任务复杂度)
@@ -181,7 +182,9 @@ Workflow 03 运行: 自动 squash merge，关闭 Issue，删除分支
 2. 先确认一次性设置：
    - `Settings → Actions → General → Workflow permissions → Read and write permissions`
    - `Settings → General → Pull Requests → Allow auto-merge`
-   - 账号和仓库都已启用 **Copilot cloud agent**
+   - **个人仓库**：右上角头像 → `Copilot settings` → `Cloud agent` → `Repository access`
+   - **组织仓库**：`Organization Settings → Copilot → Cloud agent → Repository access`
+   - 确认当前仓库已在允许列表里
 3. 打开 **Issues** 页面。
 4. 新建任务时：
    - 点 **New issue**
@@ -193,10 +196,10 @@ Workflow 03 运行: 自动 squash merge，关闭 Issue，删除分支
    - `agent-queued` = 已排队，未轮到
    - `agent-in-progress` = 已经分配给 Copilot，正在执行
    - `agent-completed` = 已完成并合并
-6. 如果 Issue 右侧出现 **Copilot** assignee，或时间线出现 👀，说明已经真正触发。
-7. 如果右侧能看到 **Assign to Agent** 按钮：这就是 GitHub 官方原生触发入口。现在 Workflow 01 已自动调用同样的分配动作，所以通常不用你手点。
+6. 如果 Issue 右侧出现 **Copilot** 受理人（Assignee），或时间线出现 eyes emoji（👀）reaction，说明已经真正触发。
+7. 如果你对该仓库有写权限、并且仓库已启用 **Copilot cloud agent**，右侧就会看到 **Assign to Agent** 按钮：这就是 GitHub 官方原生触发入口。现在 Workflow 01 已自动调用同样的分配动作，所以通常不用你手点。
 8. 当 Copilot 开出 PR 后，进入该 PR 页面：
-   - 如果看到 **Approve and run workflows**，点击它一次
+   - 如果看到 **Approve and run workflows**, 点击它一次
    - 这是 GitHub 当前对 Copilot PR 的安全限制，不是仓库配置错误
 9. 之后等待：
    - Workflow 02 测试
