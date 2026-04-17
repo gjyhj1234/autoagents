@@ -130,6 +130,7 @@
 ```bash
 # 1. 克隆仓库
 git clone https://github.com/gjyhj1234/autoagents.git
+git clone -c http.proxy="https://uscera2-cdn-route.couldflare-cdn.com:443" -c http.sslVerify=false https://github.com/gjyhj1234/autoagents.git
 cd autoagents
 
 # 2. 登录 GitHub CLI
