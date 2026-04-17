@@ -285,7 +285,7 @@ jobs:
                 labels: ['agent-queued'],
               }).catch(() => {});
 
-              const isMissingPat = !process.env.COPILOT_PAT_SET || process.env.COPILOT_PAT_SET === '';
+              const isMissingPat = process.env.COPILOT_PAT_SET !== 'true';
               const hint = isMissingPat
                 ? '请按照 `docs/setup-copilot-pat.md` 创建 Fine-grained PAT 并存为仓库 Secret `COPILOT_PAT`。'
                 : '请检查 `COPILOT_PAT` 是否过期、权限是否正确（metadata:read, actions:rw, contents:rw, issues:rw, pull-requests:rw）。';
@@ -313,4 +313,4 @@ jobs:
               throw error;
             }
         env:
-          COPILOT_PAT_SET: ${{ secrets.COPILOT_PAT }}
+          COPILOT_PAT_SET: ${{ secrets.COPILOT_PAT != '' && 'true' || 'false' }}
