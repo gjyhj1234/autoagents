@@ -5,6 +5,7 @@ COPY src/backend/DentalChart.sln ./src/backend/
 COPY src/backend/DentalChart.Api/DentalChart.Api.csproj ./src/backend/DentalChart.Api/
 COPY src/backend/DentalChart.Core/DentalChart.Core.csproj ./src/backend/DentalChart.Core/
 COPY src/backend/DentalChart.Infrastructure/DentalChart.Infrastructure.csproj ./src/backend/DentalChart.Infrastructure/
+COPY src/backend/DentalChart.Tests/DentalChart.Tests.csproj ./src/backend/DentalChart.Tests/
 RUN dotnet restore ./src/backend/DentalChart.sln
 
 COPY src/backend ./src/backend
