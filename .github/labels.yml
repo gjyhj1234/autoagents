@@ -13,6 +13,10 @@ labels:
     color: "e4e669"
     description: "Copilot Agent is currently working on this issue"
 
+  - name: "agent-queued"
+    color: "fbca04"
+    description: "Task is queued and waiting for Copilot to pick it up"
+
   - name: "agent-completed"
     color: "0e8a16"
     description: "Agent task completed and merged"

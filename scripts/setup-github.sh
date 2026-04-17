@@ -31,6 +31,7 @@ create_label() {
 
 create_label "agent-task"        "0075ca" "Task ready for Copilot Coding Agent — triggers automation pipeline"
 create_label "agent-in-progress" "e4e669" "Copilot Agent is currently working on this issue"
+create_label "agent-queued"      "fbca04" "Task is queued and waiting for Copilot to pick it up"
 create_label "agent-completed"   "0e8a16" "Agent task completed and merged"
 create_label "auto-merge"        "6f42c1" "PR will be auto-merged after all checks pass"
 create_label "infrastructure"    "d4c5f9" "Docker, CI/CD, DevOps"
@@ -110,13 +111,23 @@ create_issue 11 "Frontend: Patient Detail, Medical History, and Appointment Sche
 create_issue 12 "Reporting, PDF Export, and End-to-End Integration Tests" "agent-task,testing"       "Sprint 3 — Polish & Testing"           "docs/tasks/12-reporting-testing.md"
 
 echo ""
+echo "🚀 Starting the issue queue workflow..."
+workflow_output="$(gh workflow run "01-issue-agent.yml" --repo "$REPO" 2>&1)" \
+  && echo "  ✅ Workflow 01 queued successfully" \
+  || {
+    echo "  ⚠️  Could not start Workflow 01 automatically; run it once from the Actions page"
+    echo "     $workflow_output"
+  }
+
+echo ""
 echo "============================================================"
 echo "✅ Repository setup complete!"
 echo ""
 echo "Next steps:"
 echo "  1. Go to: https://github.com/$REPO/issues"
 echo "  2. All 12 issues were created with the 'agent-task' label already applied"
-echo "  3. The Copilot Agent pipeline triggered automatically when each issue was created"
-echo "  4. Monitor Actions tab: https://github.com/$REPO/actions"
-echo "  5. Watch PRs appear as the Agent completes each task!"
+echo "  3. Workflow 01 will mark one issue as 'agent-in-progress' and the others as 'agent-queued'"
+echo "  4. The issue assigned to Copilot is the one currently running"
+echo "  5. Monitor Actions tab: https://github.com/$REPO/actions"
+echo "  6. If a Copilot PR appears, you may still need to click 'Approve and run workflows' on that PR"
 echo "============================================================"
