@@ -280,7 +280,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
   entity_id UUID,
   old_value JSONB,
   new_value JSONB,
-  ip_address INET,
+  ip_address TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
