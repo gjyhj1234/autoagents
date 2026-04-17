@@ -1,7 +1,7 @@
 name: 🤖 Agent Task
 description: >
   Create a task for the Copilot Coding Agent to implement.
-  Add the "agent-task" label to automatically trigger the agent.
+  Add the "agent-task" label to enter the Copilot queue.
 title: "[Task-XX] "
 labels: ["agent-task"]
 assignees: []
@@ -11,11 +11,12 @@ body:
       value: |
         ## 🤖 Automated Task for Copilot Coding Agent
         Fill in the details below. When you add the **`agent-task`** label, the automation pipeline will:
-        1. 📢 Notify the Copilot Coding Agent
-        2. 🛠️ Agent implements the requirements and opens a PR
-        3. 🧪 CI/CD runs automated tests
-        4. ✅ PR auto-merges if all tests pass
-        5. 🔁 Move to the next issue
+        1. 📥 Put the issue into the Copilot queue
+        2. 🤖 Automatically assign the next ready issue to Copilot
+        3. 🛠️ Agent implements the requirements and opens a PR
+        4. 🧪 CI/CD runs automated tests
+        5. ✅ PR auto-merges if all tests pass
+        6. 🔁 Move to the next issue
 
   - type: input
     id: task-number

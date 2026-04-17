@@ -59,8 +59,8 @@
 │             │                                                           │
 │             ▼                                                           │
 │  ┌──────────────────────┐                                               │
-│  │  Workflow 01:         │  触发条件: issue labeled "agent-task"         │
-│  │  Issue → Agent       │  操作: 自动 @copilot 发起编码请求               │
+│  │  Workflow 01:         │  触发条件: task issue 变化 / 手动运行            │
+│  │  Issue Queue → Agent │  操作: 自动把下一个任务 Assign 给 Copilot        │
 │  └──────────┬───────────┘                                               │
 │             │                                                           │
 │             ▼                                                           │
@@ -90,7 +90,7 @@
 
 | 文件 | 触发条件 | 作用 |
 |------|----------|------|
-| `.github/workflows/01-issue-agent.yml` | Issue 添加 `agent-task` 标签 | 自动调用 Copilot Coding Agent |
+| `.github/workflows/01-issue-agent.yml` | Task Issue 变化 / 手动运行 | 自动维护队列并把下一个任务分配给 Copilot |
 | `.github/workflows/02-pr-tests.yml` | PR 创建或更新 | 运行后端测试、前端测试、Docker 冒烟测试 |
 | `.github/workflows/03-auto-merge.yml` | checks 完成 | 自动合并通过所有测试的 PR |
 
@@ -122,6 +122,7 @@
 2. **仓库 Settings 配置**（只需做一次）：
    - `Settings → General → Pull Requests` → 勾选 **Allow auto-merge** ✅
    - `Settings → Actions → General` → 选择 **Read and write permissions** ✅
+   - `Settings → Copilot`（或个人 Copilot 设置）→ 确认 **Copilot cloud agent** 已启用 ✅
 
 ### 方式 A：一键初始化（推荐）
 
@@ -144,6 +145,7 @@ bash scripts/setup-github.sh
 - 创建所有必要的 GitHub Labels
 - 创建 3 个 Sprint 里程碑
 - 创建 12 个任务 Issues（每个都带 `agent-task` 标签）
+- 触发 Workflow 01，自动把最早的任务分配给 Copilot
 
 ### 方式 B：手动创建 Issue
 
@@ -152,23 +154,59 @@ bash scripts/setup-github.sh
 3. 选择模板 **🤖 Agent Task**
 4. 填写任务需求
 5. 添加标签 `agent-task`
-6. 提交 → 流水线自动启动！
+6. 提交 → Workflow 01 会把它加入队列
+7. 当轮到该任务时，系统会自动执行与右侧 **Assign to Agent → Copilot** 相同的动作
 
 ### 流水线执行过程（全程自动）
 
 ```
 你的操作: 给 Issue 添加 "agent-task" 标签
                 ↓  (约 30 秒)
-Workflow 01 运行: 自动在 Issue 下评论，@copilot 请求编码
+Workflow 01 运行: 自动把最早的待办 Issue Assign 给 Copilot
                 ↓  (约 5-30 分钟，取决于任务复杂度)
 Copilot Agent: 读取 Issue + 架构说明，编写代码，提交 PR
                 ↓  (约 5-15 分钟)
+你可能需要在 PR 上点一次 "Approve and run workflows"
+                ↓
 Workflow 02 运行: 测试后端、测试前端、Docker 冒烟测试
                 ↓  (测试全部通过后)
 Workflow 03 运行: 自动 squash merge，关闭 Issue，删除分支
                 ↓
 ✅ 任务完成！查看 main 分支上的新代码。
 ```
+
+### GitHub 网页端准确操作指南（零基础）
+
+1. 打开仓库首页：<https://github.com/gjyhj1234/autoagents>
+2. 先确认一次性设置：
+   - `Settings → Actions → General → Workflow permissions → Read and write permissions`
+   - `Settings → General → Pull Requests → Allow auto-merge`
+   - 账号和仓库都已启用 **Copilot cloud agent**
+3. 打开 **Issues** 页面。
+4. 新建任务时：
+   - 点 **New issue**
+   - 选 **🤖 Agent Task**
+   - 填内容
+   - 确认有 `agent-task` 标签
+   - 点 **Submit new issue**
+5. 提交后看右侧和标签：
+   - `agent-queued` = 已排队，未轮到
+   - `agent-in-progress` = 已经分配给 Copilot，正在执行
+   - `agent-completed` = 已完成并合并
+6. 如果 Issue 右侧出现 **Copilot** assignee，或时间线出现 👀，说明已经真正触发。
+7. 如果右侧能看到 **Assign to Agent** 按钮：这就是 GitHub 官方原生触发入口。现在 Workflow 01 已自动调用同样的分配动作，所以通常不用你手点。
+8. 当 Copilot 开出 PR 后，进入该 PR 页面：
+   - 如果看到 **Approve and run workflows**，点击它一次
+   - 这是 GitHub 当前对 Copilot PR 的安全限制，不是仓库配置错误
+9. 之后等待：
+   - Workflow 02 测试
+   - Workflow 03 自动合并
+   - 下一个 `agent-queued` Issue 自动转成 `agent-in-progress`
+10. 查看“当前是否正在执行”：
+   - Issue 右侧 Assignees 是否为 **Copilot**
+   - Issue 标签是否为 `agent-in-progress`
+   - PR / Issue 时间线里是否出现 👀、Draft PR、`View session`
+   - Actions 页面是否有 **Copilot cloud agent** 或对应 workflow 在运行
 
 ---
 
@@ -240,24 +278,19 @@ autoagents/
 
 **文件**: `.github/workflows/01-issue-agent.yml`
 
-**触发**: `issues: [labeled]` → 当标签 `agent-task` 被添加时
+**触发**: `issues: [opened, reopened, labeled, unlabeled]` + `workflow_dispatch`
 
 **动作**:
-1. 读取 Issue 内容和标题
-2. 解析任务编号（如 `[Task-03]`）
-3. 在 Issue 下自动发评论，内容包含：
-   - `@github-copilot` 触发词
-   - 完整任务需求
-   - 指向 `docs/tasks/` 规格文档的链接
-   - 分支命名规范
-   - 交付物清单
-4. 添加 `agent-in-progress` 标签
+1. 扫描所有开放的 `agent-task` Issues
+2. 保证同一时刻只允许一个任务处于 `agent-in-progress`
+3. 自动把最早的待办 Issue 分配给 **Copilot**
+4. 其余任务自动标记为 `agent-queued`
+5. 在 Issue 下维护状态评论，提示你如何判断是否真正开始执行
 
-**Copilot Agent 收到评论后**：
-- 读取 Issue + `.github/copilot-instructions.md`（架构指南）
-- 创建特性分支 `feature/task-XX-description`
-- 编写代码（前端/后端/数据库按需）
-- 提交 PR（标题包含 `Closes #N`）
+**关键点**：
+- 右侧 **Assign to Agent** 才是 GitHub 官方原生触发方式
+- Workflow 01 现在通过 GitHub API 自动执行同样的“Assign to Copilot”动作
+- 所以不再依赖 `@github-copilot` 评论触发
 
 ### Workflow 02 — PR Auto Tests
 
@@ -287,8 +320,8 @@ autoagents/
 4. 从 PR 描述提取 `Closes #N` → 更新 Issue 为 `agent-completed`
 5. 删除特性分支
 
-> **注意**: Copilot Agent 创建的 PR 需要添加 `auto-merge` 标签才会自动合并。  
-> 可在 Workflow 01 中配置自动为 Copilot PR 添加该标签（监听 `pull_request: opened` 事件）。
+> **注意 1**: Copilot Agent 创建的 PR 需要 `auto-merge` 标签才会自动合并，本仓库已通过 Workflow 04 自动添加。  
+> **注意 2**: GitHub 当前对 Copilot 创建的 PR 仍可能要求你点击一次 **Approve and run workflows**，这一步暂时不能完全消除。
 
 ---
 
@@ -332,16 +365,16 @@ cd src/frontend && npm run test
 ## ❓ 常见问题
 
 **Q: Copilot Agent 没有自动触发怎么办？**  
-A: 确认账号有 Copilot 订阅（含 Agent 功能），并且 Workflow 01 在 Actions 页面已启用。可手动在 Issue 下评论 `@github-copilot please work on this issue`。
+A: 先看 Issue 右侧是否真的分配给了 **Copilot**。如果没有，点右侧 **Assign to Agent → Copilot** 可以立即手动触发；这也是 GitHub 官方原生方式。Workflow 01 现在会自动做这件事，但如果你是老的 Issues，请到 **Actions → 🤖 01 — Issue → Agent → Run workflow** 手动跑一次来重建队列。
 
 **Q: 测试失败，PR 没有自动合并怎么办？**  
-A: 查看 Actions 里 Workflow 02 的日志，修复代码后推送到同一分支，PR 会自动重新测试。
+A: 先确认你有没有在 PR 页面点过 **Approve and run workflows**。如果已经点过，再查看 Actions 里 Workflow 02 的日志，修复代码后推送到同一分支，PR 会自动重新测试。
 
 **Q: 如何在 PR 上添加 auto-merge 标签？**  
-A: 可以配置一个额外的 workflow 监听 `pull_request: opened` 事件，当 PR 标题包含 `[Task-` 时自动添加 `auto-merge` 标签。或者直接在 PR 页面手动添加。
+A: 已由 `.github/workflows/04-label-pr.yml` 自动处理，通常不需要手工添加。
 
 **Q: 任务有依赖关系，要按顺序执行吗？**  
-A: 是的。建议按顺序从 Task-01 开始。每个任务文件的 "Depends On" 字段说明了依赖关系。
+A: 是的。现在 Workflow 01 会按 Issue 编号顺序只放行一个任务，Workflow 03 合并后会自动唤醒下一个排队任务。
 
 ---
 
